@@ -1,0 +1,15 @@
+scze.biancasthefania.aguilar.du@unifranz.edu.bo
+admin1234
+
+
+
+Comandos que se deben de ejecutar en paralelo:
+
+php artisan serve --port=8080
+
+
+uvicorn main:app --reload --port 8001
+
+php artisan queue:work
+
+npm run dev
