@@ -30,7 +30,6 @@
                 <canvas id="canvas" class="hidden"></canvas>
                 <img id="preview" class="hidden absolute inset-0 w-full h-full object-cover" alt="">
 
-                {{-- Guía facial --}}
                 <div id="guia" class="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div class="w-2/3 aspect-[3/4] rounded-full border-4 border-white/60 border-dashed"></div>
                 </div>
@@ -43,7 +42,7 @@
                 </div>
             </div>
 
-            <input type="file" id="selfie-file" name="selfie" accept="image/*" class="hidden" required>
+            <input type="file" id="selfie-file" name="selfie" accept="image/*" class="hidden">
 
             <div id="botones-camara" class="flex gap-2">
                 <button type="button" id="btn-capturar" class="btn btn-primary flex-1">
@@ -62,6 +61,8 @@
         </form>
 
         <script>
+            console.log('Script de selfie cargado');
+
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             const preview = document.getElementById('preview');
@@ -72,6 +73,8 @@
             const botonesConfirmar = document.getElementById('botones-confirmar');
             const btnCapturar = document.getElementById('btn-capturar');
             const btnRepetir = document.getElementById('btn-repetir');
+            const btnEnviar = document.getElementById('btn-enviar');
+            const form = document.getElementById('form-selfie');
 
             let stream = null;
 
@@ -83,9 +86,11 @@
                     });
                     video.srcObject = stream;
                 } catch (e) {
+                    console.error('Cámara no disponible:', e);
                     video.classList.add('hidden');
                     guia.classList.add('hidden');
                     errorCamara.classList.remove('hidden');
+                    btnCapturar.disabled = true;
                 }
             }
 
@@ -96,23 +101,30 @@
                 }
             }
 
+            function asignarArchivo(blob, nombre) {
+                const file = new File([blob], nombre, { type: blob.type || 'image/jpeg' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                fileInput.files = dt.files;
+                console.log('Archivo asignado:', fileInput.files[0]);
+            }
+
             btnCapturar.addEventListener('click', () => {
                 const w = video.videoWidth;
                 const h = video.videoHeight;
+                if (!w || !h) {
+                    alert('La cámara aún no está lista. Espera un momento e intenta de nuevo.');
+                    return;
+                }
                 canvas.width = w;
                 canvas.height = h;
                 const ctx = canvas.getContext('2d');
-                // Voltear horizontalmente (la cámara frontal viene espejada)
                 ctx.translate(w, 0);
                 ctx.scale(-1, 1);
                 ctx.drawImage(video, 0, 0, w, h);
 
                 canvas.toBlob((blob) => {
-                    const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
-                    const dt = new DataTransfer();
-                    dt.items.add(file);
-                    fileInput.files = dt.files;
-
+                    asignarArchivo(blob, 'selfie.jpg');
                     preview.src = URL.createObjectURL(blob);
                     preview.classList.remove('hidden');
                     video.classList.add('hidden');
@@ -136,6 +148,7 @@
             fileInput.addEventListener('change', (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
+                console.log('Archivo subido:', file);
                 preview.src = URL.createObjectURL(file);
                 preview.classList.remove('hidden');
                 video.classList.add('hidden');
@@ -145,9 +158,18 @@
                 detenerCamara();
             });
 
-            // Estilo espejo en preview del video (no en la captura final)
-            video.style.transform = 'scaleX(-1)';
+            form.addEventListener('submit', (e) => {
+                console.log('Submit disparado. Files:', fileInput.files);
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    e.preventDefault();
+                    alert('Primero toma una foto o sube una imagen antes de enviar.');
+                    return;
+                }
+                btnEnviar.disabled = true;
+                btnEnviar.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Enviando...';
+            });
 
+            video.style.transform = 'scaleX(-1)';
             iniciarCamara();
         </script>
     </x-auth-split>
