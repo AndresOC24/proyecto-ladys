@@ -60,6 +60,25 @@
                         </div>
                     @endif
 
+                    @php $ctrl = $u->resultado_analisis['parametros_control'] ?? null; @endphp
+                    @if ($ctrl)
+                        <div class="divider my-2">Parámetros de control</div>
+                        <div class="grid grid-cols-2 gap-y-2 gap-x-6 text-sm">
+                            <div>
+                                <dt class="text-base-content/60">Vigencia</dt>
+                                <dd class="font-semibold">
+                                    @if (($ctrl['vigente'] ?? null) === true) Vigente
+                                    @elseif (($ctrl['vigente'] ?? null) === false) Vencido
+                                    @else No determinada @endif
+                                </dd>
+                            </div>
+                            <div><dt class="text-base-content/60">Expira</dt><dd class="font-mono">{{ $ctrl['fecha_expiracion'] ?? '—' }}</dd></div>
+                        </div>
+                        @foreach ($ctrl['errores'] ?? [] as $err)
+                            <div class="text-error text-xs mt-1">{{ $err }}</div>
+                        @endforeach
+                    @endif
+
                     @if (! empty($u->resultado_analisis['motivo_rechazo']))
                         <div role="alert" class="alert alert-warning mt-3">
                             <span class="text-sm">{{ $u->resultado_analisis['motivo_rechazo'] }}</span>
@@ -121,6 +140,46 @@
                     @csrf
                     <button class="btn btn-ghost w-full">Re-analizar con IA</button>
                 </form>
+            </div>
+        </div>
+
+        {{-- Histórico de revisiones --}}
+        <div class="card bg-base-100 shadow">
+            <div class="card-body">
+                <h2 class="card-title">Histórico de revisiones</h2>
+                @php $historial = $u->resultado_analisis['historial_revisiones'] ?? []; @endphp
+                @if (empty($historial))
+                    <p class="text-sm text-base-content/60">Sin revisiones manuales todavía.</p>
+                @else
+                    <ul class="timeline timeline-vertical timeline-compact">
+                        @foreach (array_reverse($historial) as $rev)
+                            @php
+                                $badge = match ($rev['accion'] ?? '') {
+                                    'aprobada' => 'badge-success',
+                                    'rechazada' => 'badge-error',
+                                    'reanalisis' => 'badge-info',
+                                    default => 'badge-ghost',
+                                };
+                            @endphp
+                            <li>
+                                <div class="timeline-middle">
+                                    <span class="badge {{ $badge }} badge-xs"></span>
+                                </div>
+                                <div class="timeline-end mb-3">
+                                    <div class="flex items-center gap-2">
+                                        <span class="badge {{ $badge }} badge-sm">{{ ucfirst($rev['accion'] ?? '—') }}</span>
+                                        <time class="text-xs text-base-content/60">{{ $rev['fecha'] ?? '' }}</time>
+                                    </div>
+                                    <div class="text-xs text-base-content/70">{{ $rev['admin'] ?? '—' }}</div>
+                                    @if (! empty($rev['motivo']))
+                                        <div class="text-xs mt-1 italic">"{{ $rev['motivo'] }}"</div>
+                                    @endif
+                                </div>
+                                <hr/>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
             </div>
         </div>
     </div>

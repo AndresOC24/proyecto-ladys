@@ -47,6 +47,21 @@ class AnalizarRegistroJob implements ShouldQueue
                 $motivos[] = 'El número de carnet declarado no coincide con el del documento.';
             }
 
+            // 1b. Parámetros de control del documento (vigencia y campos mínimos)
+            $control = $resultado['parametros_control'] ?? null;
+            if ($control) {
+                foreach ($control['errores'] ?? [] as $error) {
+                    $motivos[] = $error;
+                }
+            }
+
+            // 1c. Cruce de fecha de nacimiento: OCR del documento vs. declarada
+            $nacOcr = $this->fechaOcr($resultado['fecha_nacimiento'] ?? null);
+            $nacDeclarada = optional($user->fecha_nacimiento)->format('Y-m-d');
+            if ($nacOcr && $nacDeclarada && $nacOcr !== $nacDeclarada) {
+                $motivos[] = 'La fecha de nacimiento declarada no coincide con la del documento.';
+            }
+
             // 2. Detección de vida (anti-spoofing) — bloqueante
             $vida = $resultado['deteccion_vida'] ?? null;
             if ($vida === null) {
@@ -103,5 +118,15 @@ class AnalizarRegistroJob implements ShouldQueue
     private function normalizar(string $valor): string
     {
         return preg_replace('/\D/', '', $valor) ?? '';
+    }
+
+    /** Convierte una fecha OCR 'DD/MM/YYYY' a 'YYYY-MM-DD'; null si no es válida. */
+    private function fechaOcr(?string $valor): ?string
+    {
+        if (! $valor) {
+            return null;
+        }
+        $fecha = \DateTime::createFromFormat('d/m/Y', trim($valor));
+        return $fecha ? $fecha->format('Y-m-d') : null;
     }
 }

@@ -65,13 +65,7 @@ class AdminController extends Controller
     {
         $usuaria->update([
             'estado_verificacion' => 'verificada',
-            'resultado_analisis' => array_merge($usuaria->resultado_analisis ?? [], [
-                'revision_manual' => [
-                    'accion' => 'aprobada',
-                    'admin' => auth()->user()->email,
-                    'fecha' => now()->toDateTimeString(),
-                ],
-            ]),
+            'resultado_analisis' => $this->registrarRevision($usuaria, 'aprobada'),
             'analizado_en' => now(),
         ]);
 
@@ -84,13 +78,8 @@ class AdminController extends Controller
 
         $usuaria->update([
             'estado_verificacion' => 'rechazada',
-            'resultado_analisis' => array_merge($usuaria->resultado_analisis ?? [], [
+            'resultado_analisis' => $this->registrarRevision($usuaria, 'rechazada', $request->motivo, [
                 'motivo_rechazo' => $request->motivo,
-                'revision_manual' => [
-                    'accion' => 'rechazada',
-                    'admin' => auth()->user()->email,
-                    'fecha' => now()->toDateTimeString(),
-                ],
             ]),
             'analizado_en' => now(),
         ]);
@@ -100,8 +89,33 @@ class AdminController extends Controller
 
     public function reanalizar(User $usuaria): RedirectResponse
     {
+        $usuaria->update([
+            'resultado_analisis' => $this->registrarRevision($usuaria, 'reanalisis'),
+        ]);
+
         AnalizarRegistroJob::dispatch($usuaria->id);
         return back()->with('status', 'Reanálisis encolado.');
+    }
+
+    /**
+     * Añade una entrada al histórico de revisiones sin perder las anteriores.
+     *
+     * @param  array<string,mixed>  $extra  Claves adicionales a fusionar en resultado_analisis.
+     * @return array<string,mixed>          Nuevo resultado_analisis listo para persistir.
+     */
+    private function registrarRevision(User $usuaria, string $accion, ?string $motivo = null, array $extra = []): array
+    {
+        $resultado = $usuaria->resultado_analisis ?? [];
+        $historial = $resultado['historial_revisiones'] ?? [];
+
+        $historial[] = array_filter([
+            'accion' => $accion,
+            'admin' => auth()->user()->email,
+            'fecha' => now()->toDateTimeString(),
+            'motivo' => $motivo,
+        ], fn ($v) => $v !== null);
+
+        return array_merge($resultado, $extra, ['historial_revisiones' => $historial]);
     }
 
     public function imagen(User $usuaria, string $tipo): StreamedResponse
