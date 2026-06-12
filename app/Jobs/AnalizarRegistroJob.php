@@ -86,12 +86,45 @@ class AnalizarRegistroJob implements ShouldQueue
                 }
             }
 
+            // 3b. Licencia de conducir profesional (solo conductoras)
+            $licencia = null;
+            $licenciaIndeterminada = false;
+            if ($user->hasRole('conductora')) {
+                if (! $user->licencia_path) {
+                    $motivos[] = 'No se cargó la licencia de conducir.';
+                } else {
+                    try {
+                        $licencia = $ia->procesarLicencia(Storage::disk('local')->path($user->licencia_path));
+                    } catch (\Throwable $e) {
+                        $motivos[] = 'No se pudo validar la licencia de conducir.';
+                        Log::warning('Validación de licencia falló', ['user' => $this->userId, 'error' => $e->getMessage()]);
+                    }
+
+                    $veredictoLic = $licencia['veredicto'] ?? null;
+                    if ($licencia && ($licencia['error'] ?? false)) {
+                        $motivos[] = 'Licencia: '.$licencia['error'];
+                    } elseif ($veredictoLic === 'no_profesional') {
+                        $motivos[] = 'La licencia de conducir no es de categoría profesional.';
+                    } elseif ($veredictoLic === 'indeterminado') {
+                        $licenciaIndeterminada = true;
+                    }
+                }
+            }
+
             // 4. Decisión final
-            if (empty($motivos) && $veredictoFacial === 'aprobado') {
+            $facialAprobado = $veredictoFacial === 'aprobado';
+            $requiereRevision = $veredictoFacial === 'revision_humana' || $licenciaIndeterminada;
+
+            if (empty($motivos) && $facialAprobado && ! $requiereRevision) {
                 $estadoFinal = 'verificada';
-            } elseif (empty($motivos) && $veredictoFacial === 'revision_humana') {
+            } elseif (empty($motivos) && $requiereRevision) {
                 $estadoFinal = 'pendiente';
-                $motivos[] = 'La coincidencia facial es ambigua. Tu registro será revisado por un administrador.';
+                if ($veredictoFacial === 'revision_humana') {
+                    $motivos[] = 'La coincidencia facial es ambigua. Tu registro será revisado por un administrador.';
+                }
+                if ($licenciaIndeterminada) {
+                    $motivos[] = 'No se pudo confirmar automáticamente la categoría profesional de la licencia. Será revisada por un administrador.';
+                }
             } else {
                 $estadoFinal = 'rechazada';
             }
@@ -101,15 +134,21 @@ class AnalizarRegistroJob implements ShouldQueue
                 'resultado_analisis' => array_merge($resultado, [
                     'numero_declarado' => $declarado,
                     'numero_extraido' => $extraido,
+                    'validacion_licencia' => $licencia,
                     'motivo_rechazo' => empty($motivos) ? null : implode(' ', $motivos),
                 ]),
                 'analizado_en' => now(),
             ]);
         } catch (\Throwable $e) {
+            // Un fallo del servicio de IA (caído, timeout, error) NO debe rechazar a
+            // la usuaria: queda en revisión manual para que un administrador reintente.
             Log::error('AnalizarRegistroJob falló', ['user' => $this->userId, 'error' => $e->getMessage()]);
             $user->update([
-                'estado_verificacion' => 'rechazada',
-                'resultado_analisis' => ['motivo_rechazo' => 'Error al procesar las imágenes: '.$e->getMessage()],
+                'estado_verificacion' => 'pendiente',
+                'resultado_analisis' => array_merge($user->resultado_analisis ?? [], [
+                    'motivo_rechazo' => 'No se pudo completar la verificación automática. Tu registro será revisado por un administrador.',
+                    'error_tecnico' => $e->getMessage(),
+                ]),
                 'analizado_en' => now(),
             ]);
         }

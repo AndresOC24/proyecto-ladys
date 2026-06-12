@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminController extends Controller
@@ -118,12 +119,75 @@ class AdminController extends Controller
         return array_merge($resultado, $extra, ['historial_revisiones' => $historial]);
     }
 
+    public function desactivar(User $usuaria): RedirectResponse
+    {
+        if ($usuaria->id === auth()->id()) {
+            return back()->with('error', 'No puedes desactivar tu propia cuenta.');
+        }
+
+        $usuaria->update(['activa' => false]);
+
+        return back()->with('status', 'Usuaria desactivada. No podrá iniciar sesión.');
+    }
+
+    public function reactivar(User $usuaria): RedirectResponse
+    {
+        $usuaria->update(['activa' => true]);
+
+        return back()->with('status', 'Usuaria reactivada.');
+    }
+
+    public function eliminar(User $usuaria): RedirectResponse
+    {
+        if ($usuaria->id === auth()->id()) {
+            return back()->with('error', 'No puedes eliminar tu propia cuenta.');
+        }
+
+        // Eliminamos los documentos almacenados antes de borrar el registro.
+        $paths = array_filter([
+            $usuaria->carnet_anverso_path,
+            $usuaria->carnet_reverso_path,
+            $usuaria->selfie_path,
+            $usuaria->licencia_path,
+        ]);
+
+        foreach ($paths as $path) {
+            Storage::disk('local')->delete($path);
+        }
+
+        $nombre = $usuaria->name;
+        $usuaria->delete();
+
+        // No usamos back(): la usuaria ya no existe, volvemos al listado.
+        return redirect()
+            ->route('admin.usuarias')
+            ->with('status', "Cuenta de «{$nombre}» eliminada permanentemente.");
+    }
+
+    public function asignarRol(Request $request, User $usuaria): RedirectResponse
+    {
+        $nombres = Role::pluck('nombre')->all();
+        $datos = $request->validate([
+            'rol' => ['required', 'string', Rule::in($nombres)],
+        ]);
+
+        if ($usuaria->id === auth()->id() && $datos['rol'] !== Role::ADMINISTRADOR) {
+            return back()->with('error', 'No puedes quitarte tu propio rol de administrador.');
+        }
+
+        $rol = Role::where('nombre', $datos['rol'])->firstOrFail();
+        $usuaria->update(['role_id' => $rol->id]);
+
+        return back()->with('status', "Rol actualizado a «{$datos['rol']}».");
+    }
+
     public function imagen(User $usuaria, string $tipo): StreamedResponse
     {
         $path = match ($tipo) {
             'anverso' => $usuaria->carnet_anverso_path,
             'reverso' => $usuaria->carnet_reverso_path,
             'selfie' => $usuaria->selfie_path,
+            'licencia' => $usuaria->licencia_path,
             default => abort(404),
         };
 

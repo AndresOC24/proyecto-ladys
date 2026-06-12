@@ -38,6 +38,21 @@ class ServicioIA
     }
 
     /**
+     * Valida una licencia de conducir (categoría profesional) vía OCR.
+     *
+     * @param string $rutaLicencia  ruta absoluta a la imagen de la licencia
+     */
+    public function procesarLicencia(string $rutaLicencia): array
+    {
+        return $this->cliente()
+            ->timeout(120)
+            ->attach('licencia', file_get_contents($rutaLicencia), basename($rutaLicencia))
+            ->post('/procesar-licencia')
+            ->throw()
+            ->json();
+    }
+
+    /**
      * @param string $rutaDocumento  ruta absoluta a la imagen del documento
      * @param string $rutaSelfie     ruta absoluta a la imagen facial en vivo
      */

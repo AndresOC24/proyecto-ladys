@@ -18,7 +18,9 @@ Route::middleware('guest')->group(function () {
     Route::get('register/carnet', [RegistroController::class, 'mostrarCarnet'])->name('registro.carnet');
     Route::post('register/carnet', [RegistroController::class, 'guardarCarnet']);
     Route::get('register/selfie', [RegistroController::class, 'mostrarSelfie'])->name('registro.selfie');
-    Route::post('register/selfie', [RegistroController::class, 'finalizar']);
+    Route::post('register/selfie', [RegistroController::class, 'guardarSelfie']);
+    Route::get('register/licencia', [RegistroController::class, 'mostrarLicencia'])->name('registro.licencia');
+    Route::post('register/licencia', [RegistroController::class, 'guardarLicencia']);
 
     // Login (Breeze)
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');

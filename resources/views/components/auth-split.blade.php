@@ -2,14 +2,10 @@
 
 <div class="min-h-screen grid lg:grid-cols-2">
     {{-- Panel izquierdo: branding --}}
-    <div class="hidden lg:flex relative overflow-hidden bg-gradient-to-br from-pink-500 via-fuchsia-500 to-purple-600 text-white p-12 flex-col justify-between">
+    <div class="hidden lg:flex relative overflow-hidden bg-gradient-to-br from-red-700 via-red-600 to-rose-800 text-white p-12 flex-col justify-between">
         <div>
-            <a href="/" class="flex items-center gap-2 text-2xl font-bold">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-                </svg>
-                <span>Lady's On Go</span>
+            <a href="/" class="inline-flex items-center bg-white rounded-xl px-4 py-3 shadow-lg">
+                <img src="{{ asset('images/logoLadys.png') }}" alt="Lady's On Go" class="h-12 w-auto">
             </a>
         </div>
 
@@ -30,7 +26,7 @@
         <div class="w-full max-w-md">
             {{-- Logo móvil --}}
             <div class="lg:hidden flex justify-center mb-6">
-                <a href="/" class="text-xl font-bold text-primary">Lady's On Go</a>
+                <a href="/"><img src="{{ asset('images/logoLadys.png') }}" alt="Lady's On Go" class="h-12 w-auto"></a>
             </div>
 
             @if ($titulo)

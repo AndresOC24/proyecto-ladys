@@ -50,7 +50,12 @@
                 <tbody>
                     @forelse ($usuarias as $u)
                         <tr>
-                            <td class="font-medium">{{ $u->name }}</td>
+                            <td class="font-medium">
+                                {{ $u->name }}
+                                @unless ($u->activa)
+                                    <span class="badge badge-error badge-sm ml-1">Desactivada</span>
+                                @endunless
+                            </td>
                             <td class="text-sm">{{ $u->email }}</td>
                             <td class="font-mono text-sm">{{ $u->numero_carnet }}</td>
                             <td><span class="badge badge-ghost">{{ $u->role?->nombre }}</span></td>

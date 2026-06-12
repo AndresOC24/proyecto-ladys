@@ -16,6 +16,7 @@ class RegistroController extends Controller
 {
     private const SESSION_DATOS = 'registro.datos';
     private const SESSION_CARNET = 'registro.carnet';
+    private const SESSION_SELFIE = 'registro.selfie';
 
     public function mostrarDatos()
     {
@@ -81,7 +82,7 @@ class RegistroController extends Controller
         return view('auth.registro-selfie');
     }
 
-    public function finalizar(Request $request): RedirectResponse
+    public function guardarSelfie(Request $request): RedirectResponse
     {
         $datos = $request->session()->get(self::SESSION_DATOS);
         $carnet = $request->session()->get(self::SESSION_CARNET);
@@ -93,6 +94,61 @@ class RegistroController extends Controller
         $request->validate([
             'selfie' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
         ]);
+
+        $tmpDir = "carnets-tmp/".$request->session()->getId();
+        $pathSelfie = $request->file('selfie')->storeAs($tmpDir, 'selfie.jpg', 'local');
+        $request->session()->put(self::SESSION_SELFIE, $pathSelfie);
+
+        // Las conductoras deben cargar además la licencia de conducir.
+        if (($datos['rol'] ?? null) === 'conductora') {
+            return redirect()->route('registro.licencia');
+        }
+
+        return $this->finalizarRegistro($request);
+    }
+
+    public function mostrarLicencia(Request $request)
+    {
+        $datos = $request->session()->get(self::SESSION_DATOS);
+
+        if (! $datos || ! $request->session()->has(self::SESSION_SELFIE)) {
+            return redirect()->route('register');
+        }
+        if (($datos['rol'] ?? null) !== 'conductora') {
+            return redirect()->route('registro.selfie');
+        }
+
+        return view('auth.registro-licencia');
+    }
+
+    public function guardarLicencia(Request $request): RedirectResponse
+    {
+        $datos = $request->session()->get(self::SESSION_DATOS);
+
+        if (! $datos || ($datos['rol'] ?? null) !== 'conductora' ||
+            ! $request->session()->has(self::SESSION_SELFIE)) {
+            return redirect()->route('register');
+        }
+
+        $request->validate([
+            'licencia' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
+        ]);
+
+        $tmpDir = "carnets-tmp/".$request->session()->getId();
+        $pathLicencia = $request->file('licencia')->storeAs($tmpDir, 'licencia.jpg', 'local');
+
+        return $this->finalizarRegistro($request, $pathLicencia);
+    }
+
+    private function finalizarRegistro(Request $request, ?string $pathLicenciaTmp = null): RedirectResponse
+    {
+        $datos = $request->session()->get(self::SESSION_DATOS);
+        $carnet = $request->session()->get(self::SESSION_CARNET);
+        $selfieTmp = $request->session()->get(self::SESSION_SELFIE);
+
+        if (! $datos || ! $carnet || ! $selfieTmp) {
+            return redirect()->route('register');
+        }
 
         $rol = Role::where('nombre', $datos['rol'])->firstOrFail();
 
@@ -108,20 +164,22 @@ class RegistroController extends Controller
         ]);
 
         $dir = "carnets/{$user->id}";
-        $pathAnverso = $this->moverArchivo($carnet['anverso'], "{$dir}/anverso.jpg");
-        $pathReverso = $this->moverArchivo($carnet['reverso'], "{$dir}/reverso.jpg");
-        $pathSelfie = $request->file('selfie')->storeAs($dir, 'selfie.jpg', 'local');
+        $cambios = [
+            'carnet_anverso_path' => $this->moverArchivo($carnet['anverso'], "{$dir}/anverso.jpg"),
+            'carnet_reverso_path' => $this->moverArchivo($carnet['reverso'], "{$dir}/reverso.jpg"),
+            'selfie_path' => $this->moverArchivo($selfieTmp, "{$dir}/selfie.jpg"),
+        ];
 
-        $user->update([
-            'carnet_anverso_path' => $pathAnverso,
-            'carnet_reverso_path' => $pathReverso,
-            'selfie_path' => $pathSelfie,
-        ]);
+        if ($pathLicenciaTmp !== null) {
+            $cambios['licencia_path'] = $this->moverArchivo($pathLicenciaTmp, "{$dir}/licencia.jpg");
+        }
+
+        $user->update($cambios);
 
         event(new Registered($user));
         Auth::login($user);
 
-        $request->session()->forget([self::SESSION_DATOS, self::SESSION_CARNET]);
+        $request->session()->forget([self::SESSION_DATOS, self::SESSION_CARNET, self::SESSION_SELFIE]);
 
         AnalizarRegistroJob::dispatch($user->id);
 

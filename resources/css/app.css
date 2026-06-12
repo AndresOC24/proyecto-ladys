@@ -18,6 +18,19 @@
 }
 
 /*
+  Marca Lady's On Go: paleta roja tomada del logotipo.
+  Reglas sin @layer para que ganen al tema "light" de daisyUI en la cascada.
+*/
+[data-theme="light"] {
+    --color-primary: #e11d2b;
+    --color-primary-content: #ffffff;
+    --color-secondary: #9f0d1c;
+    --color-secondary-content: #ffffff;
+    --color-accent: #f43f5e;
+    --color-accent-content: #ffffff;
+}
+
+/*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
   looks the same as it did with Tailwind CSS v3.

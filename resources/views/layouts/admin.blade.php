@@ -20,13 +20,22 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </label>
             </div>
-            <div class="flex-1 font-bold">Admin · Lady's On Go</div>
+            <div class="flex-1 flex items-center gap-2 font-bold">
+                <img src="{{ asset('images/logoLadys.png') }}" alt="Lady's On Go" class="h-7 w-auto">
+                <span class="text-base-content/70">Admin</span>
+            </div>
         </header>
 
         <main class="p-4 sm:p-6 lg:p-8">
             @if (session('status'))
                 <div role="alert" class="alert alert-success mb-4">
                     <span>{{ session('status') }}</span>
+                </div>
+            @endif
+
+            @if (session('error'))
+                <div role="alert" class="alert alert-error mb-4">
+                    <span>{{ session('error') }}</span>
                 </div>
             @endif
 
@@ -40,10 +49,8 @@
         <label for="drawer-admin" class="drawer-overlay"></label>
         <div class="bg-base-100 w-64 min-h-full flex flex-col border-r border-base-300">
             <div class="p-4 border-b border-base-300">
-                <div class="font-bold text-lg bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
-                    Lady's On Go
-                </div>
-                <div class="text-xs text-base-content/60">Panel Administrativo</div>
+                <img src="{{ asset('images/logoLadys.png') }}" alt="Lady's On Go" class="h-10 w-auto">
+                <div class="text-xs text-base-content/60 mt-1">Panel Administrativo</div>
             </div>
 
             <ul class="menu flex-1 p-2">
@@ -57,6 +64,12 @@
                     <a href="{{ route('admin.usuarias') }}" class="{{ request()->routeIs('admin.usuarias') || request()->routeIs('admin.usuaria.*') ? 'menu-active' : '' }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                         Usuarias
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('admin.reportes') }}" class="{{ request()->routeIs('admin.reportes') ? 'menu-active' : '' }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-6h6v6m-9 4h12a2 2 0 002-2V7a2 2 0 00-2-2h-3.586a1 1 0 01-.707-.293l-1.414-1.414A1 1 0 0011.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        Reportes
                     </a>
                 </li>
             </ul>

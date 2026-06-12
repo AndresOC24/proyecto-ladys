@@ -79,6 +79,22 @@
                         @endforeach
                     @endif
 
+                    @php $lic = $u->resultado_analisis['validacion_licencia'] ?? null; @endphp
+                    @if ($lic)
+                        <div class="divider my-2">Licencia profesional</div>
+                        <div class="grid grid-cols-2 gap-y-2 gap-x-6 text-sm">
+                            <div><dt class="text-base-content/60">Veredicto</dt><dd class="font-semibold">{{ $lic['veredicto'] ?? '—' }}</dd></div>
+                            <div><dt class="text-base-content/60">Categoría</dt><dd class="font-mono">{{ $lic['categoria'] ?? '—' }}</dd></div>
+                            <div><dt class="text-base-content/60">¿Es licencia?</dt><dd>{{ ($lic['es_licencia'] ?? false) ? 'Sí' : 'No' }}</dd></div>
+                            <div><dt class="text-base-content/60">¿Profesional?</dt>
+                                <dd>@if (($lic['profesional'] ?? null) === true) Sí @elseif (($lic['profesional'] ?? null) === false) No @else Indeterminado @endif</dd>
+                            </div>
+                        </div>
+                        @if ($lic['error'] ?? false)
+                            <div class="text-error text-xs mt-1">{{ $lic['error'] }}</div>
+                        @endif
+                    @endif
+
                     @if (! empty($u->resultado_analisis['motivo_rechazo']))
                         <div role="alert" class="alert alert-warning mt-3">
                             <span class="text-sm">{{ $u->resultado_analisis['motivo_rechazo'] }}</span>
@@ -97,9 +113,12 @@
         <div class="card bg-base-100 shadow">
             <div class="card-body">
                 <h2 class="card-title">Documentos</h2>
+                @php
+                    $docs = ['anverso' => $u->carnet_anverso_path, 'reverso' => $u->carnet_reverso_path, 'selfie' => $u->selfie_path];
+                    if ($u->licencia_path) { $docs['licencia'] = $u->licencia_path; }
+                @endphp
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    @foreach (['anverso','reverso','selfie'] as $tipo)
-                        @php $path = $u->{"carnet_{$tipo}_path"} ?? ($tipo==='selfie' ? $u->selfie_path : null); @endphp
+                    @foreach ($docs as $tipo => $path)
                         <div>
                             <div class="text-xs font-semibold uppercase text-base-content/60 mb-1">{{ $tipo }}</div>
                             @if ($path)
@@ -140,6 +159,52 @@
                     @csrf
                     <button class="btn btn-ghost w-full">Re-analizar con IA</button>
                 </form>
+            </div>
+        </div>
+
+        {{-- Gestión de cuenta --}}
+        <div class="card bg-base-100 shadow">
+            <div class="card-body">
+                <h2 class="card-title">
+                    Gestión de cuenta
+                    @if ($u->activa)
+                        <span class="badge badge-success badge-sm">Activa</span>
+                    @else
+                        <span class="badge badge-error badge-sm">Desactivada</span>
+                    @endif
+                </h2>
+
+                {{-- Desactivar / Reactivar --}}
+                @if ($u->activa)
+                    <form method="POST" action="{{ route('admin.usuaria.desactivar', $u) }}">
+                        @csrf
+                        <button class="btn btn-warning w-full" @disabled($u->id === auth()->id())>Desactivar usuaria</button>
+                    </form>
+                @else
+                    <form method="POST" action="{{ route('admin.usuaria.reactivar', $u) }}">
+                        @csrf
+                        <button class="btn btn-success w-full">Reactivar usuaria</button>
+                    </form>
+                @endif
+
+                {{-- Asignar rol --}}
+                <div class="divider my-2">Rol</div>
+                <form method="POST" action="{{ route('admin.usuaria.rol', $u) }}" class="space-y-2">
+                    @csrf
+                    <select name="rol" class="select select-bordered w-full">
+                        @foreach (\App\Models\Role::orderBy('nombre')->pluck('nombre') as $rol)
+                            <option value="{{ $rol }}" @selected($u->role?->nombre === $rol)>{{ ucfirst($rol) }}</option>
+                        @endforeach
+                    </select>
+                    <button class="btn btn-neutral w-full">Asignar rol</button>
+                </form>
+
+                {{-- Eliminar cuenta (permanente) --}}
+                <div class="divider my-2 text-error/70">Zona de peligro</div>
+                <button class="btn btn-outline btn-error w-full" onclick="modalEliminar.showModal()"
+                        @disabled($u->id === auth()->id())>
+                    Eliminar cuenta
+                </button>
             </div>
         </div>
 
@@ -198,6 +263,23 @@
                 <button type="button" class="btn btn-ghost" onclick="modalRechazar.close()">Cancelar</button>
                 <button type="submit" class="btn btn-error">Rechazar</button>
             </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+</dialog>
+
+<dialog id="modalEliminar" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg text-error mb-2">Eliminar cuenta permanentemente</h3>
+        <p class="text-sm text-base-content/70">
+            Esta acción <strong>no se puede deshacer</strong>. Se eliminará la cuenta de
+            <strong>{{ $u->name }}</strong> junto con sus documentos (carnet, selfie y licencia).
+        </p>
+        <form method="POST" action="{{ route('admin.usuaria.eliminar', $u) }}" class="modal-action">
+            @csrf
+            @method('DELETE')
+            <button type="button" class="btn btn-ghost" onclick="modalEliminar.close()">Cancelar</button>
+            <button type="submit" class="btn btn-error">Sí, eliminar</button>
         </form>
     </div>
     <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>

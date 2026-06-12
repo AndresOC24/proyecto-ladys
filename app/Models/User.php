@@ -19,8 +19,8 @@ class User extends Authenticatable
     protected $fillable = [
         'name', 'email', 'password', 'role_id',
         'telefono', 'fecha_nacimiento', 'numero_carnet',
-        'carnet_anverso_path', 'carnet_reverso_path', 'selfie_path',
-        'estado_verificacion', 'resultado_analisis', 'analizado_en',
+        'carnet_anverso_path', 'carnet_reverso_path', 'selfie_path', 'licencia_path',
+        'estado_verificacion', 'resultado_analisis', 'analizado_en', 'activa',
     ];
     
 
@@ -40,6 +40,7 @@ class User extends Authenticatable
             'fecha_nacimiento' => 'date',
             'resultado_analisis' => 'array',
             'analizado_en' => 'datetime',
+            'activa' => 'boolean',
         ];
     }
 
