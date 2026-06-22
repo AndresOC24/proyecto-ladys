@@ -1,5 +1,5 @@
-admin@admin.com
-admin1234
+admin@ladys.bo
+password
 
 
 
