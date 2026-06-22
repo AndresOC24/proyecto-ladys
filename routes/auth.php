@@ -21,6 +21,8 @@ Route::middleware('guest')->group(function () {
     Route::post('register/selfie', [RegistroController::class, 'guardarSelfie']);
     Route::get('register/licencia', [RegistroController::class, 'mostrarLicencia'])->name('registro.licencia');
     Route::post('register/licencia', [RegistroController::class, 'guardarLicencia']);
+    Route::get('register/vehiculo', [RegistroController::class, 'mostrarVehiculo'])->name('registro.vehiculo');
+    Route::post('register/vehiculo', [RegistroController::class, 'guardarVehiculo']);
 
     // Login (Breeze)
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');

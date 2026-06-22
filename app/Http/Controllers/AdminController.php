@@ -59,7 +59,7 @@ class AdminController extends Controller
 
     public function ver(User $usuaria)
     {
-        return view('admin.usuaria-detalle', ['u' => $usuaria->load('role')]);
+        return view('admin.usuaria-detalle', ['u' => $usuaria->load('role', 'vehiculo')]);
     }
 
     public function aprobar(User $usuaria): RedirectResponse

@@ -1,11 +1,12 @@
 <x-guest-layout>
-    <x-auth-split titulo="Licencia de conducir" subtitulo="Paso 4 de 4 · Licencia profesional">
+    <x-auth-split titulo="Licencia de conducir" subtitulo="Paso 4 de 5 · Licencia profesional">
 
         <ul class="steps w-full mb-6">
             <li class="step step-primary text-xs">Datos</li>
             <li class="step step-primary text-xs">Carnet</li>
             <li class="step step-primary text-xs">Selfie</li>
             <li class="step step-primary text-xs">Licencia</li>
+            <li class="step text-xs">Vehículo</li>
         </ul>
 
         @if ($errors->any())
@@ -48,7 +49,7 @@
 
             <div class="flex gap-2">
                 <a href="{{ route('registro.selfie') }}" class="btn btn-ghost flex-1">Volver</a>
-                <button type="submit" class="btn btn-primary flex-1">Finalizar registro</button>
+                <button type="submit" class="btn btn-primary flex-1">Continuar</button>
             </div>
         </form>
 

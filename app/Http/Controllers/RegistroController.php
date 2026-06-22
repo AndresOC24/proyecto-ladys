@@ -17,6 +17,8 @@ class RegistroController extends Controller
     private const SESSION_DATOS = 'registro.datos';
     private const SESSION_CARNET = 'registro.carnet';
     private const SESSION_SELFIE = 'registro.selfie';
+    private const SESSION_LICENCIA = 'registro.licencia';
+    private const SESSION_VEHICULO = 'registro.vehiculo';
 
     public function mostrarDatos()
     {
@@ -136,15 +138,51 @@ class RegistroController extends Controller
 
         $tmpDir = "carnets-tmp/".$request->session()->getId();
         $pathLicencia = $request->file('licencia')->storeAs($tmpDir, 'licencia.jpg', 'local');
+        $request->session()->put(self::SESSION_LICENCIA, $pathLicencia);
 
-        return $this->finalizarRegistro($request, $pathLicencia);
+        // Las conductoras declaran además el vehículo antes de finalizar.
+        return redirect()->route('registro.vehiculo');
     }
 
-    private function finalizarRegistro(Request $request, ?string $pathLicenciaTmp = null): RedirectResponse
+    public function mostrarVehiculo(Request $request)
+    {
+        $datos = $request->session()->get(self::SESSION_DATOS);
+
+        if (! $datos || ($datos['rol'] ?? null) !== 'conductora' ||
+            ! $request->session()->has(self::SESSION_LICENCIA)) {
+            return redirect()->route('register');
+        }
+
+        return view('auth.registro-vehiculo');
+    }
+
+    public function guardarVehiculo(Request $request): RedirectResponse
+    {
+        $datos = $request->session()->get(self::SESSION_DATOS);
+
+        if (! $datos || ($datos['rol'] ?? null) !== 'conductora' ||
+            ! $request->session()->has(self::SESSION_LICENCIA)) {
+            return redirect()->route('register');
+        }
+
+        $vehiculo = $request->validate([
+            'placa' => ['required', 'string', 'max:20'],
+            'marca_modelo' => ['required', 'string', 'max:255'],
+            'relacion_declarada' => ['required', 'in:propio,familiar,alquilado,otro'],
+        ]);
+
+        $request->session()->put(self::SESSION_VEHICULO, $vehiculo);
+
+        return $this->finalizarRegistro($request);
+    }
+
+    private function finalizarRegistro(Request $request): RedirectResponse
     {
         $datos = $request->session()->get(self::SESSION_DATOS);
         $carnet = $request->session()->get(self::SESSION_CARNET);
         $selfieTmp = $request->session()->get(self::SESSION_SELFIE);
+        $pathLicenciaTmp = $request->session()->get(self::SESSION_LICENCIA);
+        $vehiculo = $request->session()->get(self::SESSION_VEHICULO);
 
         if (! $datos || ! $carnet || ! $selfieTmp) {
             return redirect()->route('register');
@@ -176,10 +214,17 @@ class RegistroController extends Controller
 
         $user->update($cambios);
 
+        if ($vehiculo) {
+            $user->vehiculo()->create($vehiculo);
+        }
+
         event(new Registered($user));
         Auth::login($user);
 
-        $request->session()->forget([self::SESSION_DATOS, self::SESSION_CARNET, self::SESSION_SELFIE]);
+        $request->session()->forget([
+            self::SESSION_DATOS, self::SESSION_CARNET, self::SESSION_SELFIE,
+            self::SESSION_LICENCIA, self::SESSION_VEHICULO,
+        ]);
 
         AnalizarRegistroJob::dispatch($user->id);
 

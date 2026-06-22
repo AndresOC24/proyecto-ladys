@@ -109,6 +109,20 @@
             </div>
         @endif
 
+        {{-- Vehículo (solo conductoras que lo declararon) --}}
+        @if ($u->vehiculo)
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">
+                    <h2 class="card-title">Vehículo declarado</h2>
+                    <div class="grid grid-cols-2 gap-y-2 gap-x-6 text-sm">
+                        <div><dt class="text-base-content/60">Placa</dt><dd class="font-mono uppercase">{{ $u->vehiculo->placa }}</dd></div>
+                        <div><dt class="text-base-content/60">Marca/Modelo</dt><dd>{{ $u->vehiculo->marca_modelo }}</dd></div>
+                        <div><dt class="text-base-content/60">Relación</dt><dd class="capitalize">{{ $u->vehiculo->relacion_declarada }}</dd></div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         {{-- Imágenes --}}
         <div class="card bg-base-100 shadow">
             <div class="card-body">
