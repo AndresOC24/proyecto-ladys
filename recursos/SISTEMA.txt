@@ -1,0 +1,97 @@
+Te doy el inventario completo de lo que la BD actual permite y lo que no.
+
+**Lo que SÍ permite hacer**
+
+**Gestión de cuentas y autenticación**
+- Crear cuentas de usuaria con datos personales (nombres, apellidos, teléfono, correo).
+- Autenticación con correo y contraseña, gracias a `contrasena_hash` (almacenada cifrada).
+- Distinguir tres tipos de usuario mediante el campo `rol`: pasajera, conductora y administrador.
+- Activar o desactivar cuentas con el campo `activo`, sin necesidad de eliminarlas (mantiene el historial).
+- Tener un mismo administrador resolviendo muchas revisiones (relación `usuario → revision`).
+
+**Registro y verificación de identidad**
+- Crear un proceso de verificación por cada intento de registro (`registro_verificacion`).
+- Diferenciar el flujo según se trate de pasajera o conductora (`tipo_registro`).
+- Almacenar la selfie en vivo capturada por la usuaria (`ruta_selfie`).
+- Manejar el estado del proceso completo (`estado_resultado`: pendiente, aprobado, rechazado, observado).
+- Mantener varios intentos de una misma usuaria en el tiempo, con su historial completo.
+
+**Gestión documental**
+- Almacenar múltiples documentos por registro (cédula, licencia, SOAT, CRPVA) en una misma estructura.
+- Identificar el tipo de cada documento con `tipo_documento`.
+- Marcar si la imagen cargada es legible o no (`calidad_legible`) para filtrar las que no sirven.
+- Guardar la fecha exacta de carga.
+- Almacenar los datos extraídos por OCR como pares clave-valor en `dato_documento`, lo que permite que la misma estructura soporte cualquier campo de cualquier documento sin modificar la tabla.
+
+**Registro de vehículos**
+- Asociar un vehículo a un registro de conductora con sus datos completos: placa, marca, modelo, color, año, foto.
+- Distinguir la relación de la conductora con el vehículo (`relacion_declarada`: propietaria, autorizada, tercero).
+- Mantener el detalle del vehículo declarado en ese intento de registro.
+
+**Catálogo de reglas de validación**
+- Definir las reglas que aplica el sistema en `parametro_control` (umbral facial, formato del número de cédula, coherencia de fechas, detección de vida).
+- Configurar las reglas por tipo de documento y por categoría (biométrico, documental, liveness).
+- Marcar cuáles son críticas con `es_bloqueante` para decidir si el caso se rechaza o solo se observa.
+- Modificar las reglas sin tocar el código del sistema (solo cambian datos en la tabla).
+
+**Resultados de validación granulares**
+- Guardar un resultado por cada regla aplicada a cada registro en `resultado_validacion`.
+- Saber exactamente qué falló: si fue el match facial, el OCR, el liveness o la coherencia de fechas.
+- Almacenar el detalle de cada evaluación (por ejemplo, la distancia exacta del match facial).
+
+**Validación administrativa híbrida**
+- Derivar a un administrador los registros observados, mediante la tabla `revision`.
+- Documentar la decisión (aprobado, rechazado, reenvío), la observación escrita, la fecha y quién la tomó.
+- Permitir múltiples revisiones si la usuaria reenvía documentos.
+
+**Auditoría y trazabilidad**
+- Registrar cualquier acción del sistema en `bitacora`, no solo las de verificación: logins, modificaciones de parámetros, cambios en cuentas, decisiones de revisión.
+- Saber quién hizo qué, sobre qué tabla, sobre qué registro y cuándo.
+- Guardar el detalle del cambio en formato JSON (`detalles`), incluyendo valores previos y posteriores si se necesita.
+
+**Reportes y consultas**
+- Generar reportes de registros aprobados, rechazados u observados en un período.
+- Buscar y filtrar usuarias por nombre, apellido, estado o fecha.
+- Consultar el historial completo de un registro (qué documentos cargó, qué resultados obtuvo, quién lo revisó, qué decidió).
+
+---
+
+**Lo que NO permite hacer**
+
+**Operación del servicio de transporte (queda fuera del alcance del proyecto)**
+- Solicitar y asignar viajes entre conductora y pasajera.
+- Calcular tarifas, distancias o rutas.
+- Procesar pagos.
+- Geolocalización en tiempo real.
+- Sistema de calificaciones entre conductoras y pasajeras.
+- Mensajería interna o chat.
+- Notificaciones push o por SMS al teléfono de las usuarias.
+
+**Limitaciones del modelo de roles**
+- Una misma usuaria no puede tener simultáneamente los roles de pasajera y conductora; debe elegir uno por cuenta. Si quisiera operar en ambos sentidos, necesitaría dos cuentas separadas.
+
+**Recuperación de credenciales**
+- No hay tablas para gestionar recuperación de contraseña (tokens, intentos, expiración). Eso lo maneja Laravel internamente con sus propias tablas, no este esquema.
+
+**Sesiones**
+- No se modelan sesiones activas, dispositivos conectados ni "cerrar sesión en todos los dispositivos". También lo gestiona el framework.
+
+**Verificación periódica posterior al registro**
+- Una vez aprobada, no hay un mecanismo de revalidación automática cada cierto tiempo. La validación es de alta única, no continua. Si la cédula vence, el sistema no lo detecta solo (a menos que se rechace en la carga inicial por estar vencida).
+
+**Reconocimiento facial 1:N**
+- El sistema no busca a una persona dentro de la base. Solo verifica 1:1 contra su documento. Para detectar, por ejemplo, que alguien intentó registrarse con dos identidades distintas usando la misma cara, haría falta agregar `embedding_facial` indexado en `usuario` o `registro_verificacion`, lo cual no está modelado.
+
+**Estadísticas de la operación**
+- No registra cuántos viajes hizo una conductora, cuántas usuarias activas hay por zona, ni métricas del servicio. Esas son funciones de la fase operativa.
+
+**Documentos vencidos o renovados**
+- No hay campo para fecha de vencimiento de cédula, licencia, SOAT o CRPVA. Si quieres detectar vencimientos, habría que agregar `fecha_vencimiento` a `documento` o como campo en `dato_documento`.
+
+**Multi-país o multi-formato de documento**
+- El catálogo `parametro_control` y los valores ENUM están diseñados para la cédula boliviana en su formato vigente. Adaptarlo a otro país o a un nuevo formato del SEGIP requeriría agregar parámetros nuevos y, eventualmente, ajustar las reglas del OCR.
+
+**Cifrado de imágenes y embeddings a nivel de BD**
+- El esquema almacena `ruta_imagen` y `ruta_selfie` como cadenas de texto que apuntan al sistema de archivos. La protección de esos archivos (cifrado en disco, restricción de acceso) debe implementarse fuera de la BD, en el servidor.
+
+---

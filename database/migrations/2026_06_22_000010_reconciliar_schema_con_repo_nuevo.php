@@ -76,9 +76,12 @@ return new class extends Migration
         });
 
         // 6. Ampliar el ENUM de estado_verificacion para incluir valores del nuevo repo
-        DB::statement(
-            "ALTER TABLE users MODIFY estado_verificacion ENUM('pendiente','en_proceso','aprobada','rechazada','en_revision','analizando','verificada') DEFAULT 'pendiente'"
-        );
+        // SQLite no soporta MODIFY COLUMN — sólo aplica en MySQL/MariaDB
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement(
+                "ALTER TABLE users MODIFY estado_verificacion ENUM('pendiente','en_proceso','aprobada','rechazada','en_revision','analizando','verificada') DEFAULT 'pendiente'"
+            );
+        }
 
         // 7. Crear tabla parametros_control si no existe
         if (! Schema::hasTable('parametros_control')) {
@@ -125,9 +128,11 @@ return new class extends Migration
             });
         }
 
-        DB::statement(
-            "ALTER TABLE users MODIFY estado_verificacion ENUM('pendiente','en_proceso','aprobada','rechazada','en_revision') DEFAULT 'pendiente'"
-        );
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement(
+                "ALTER TABLE users MODIFY estado_verificacion ENUM('pendiente','en_proceso','aprobada','rechazada','en_revision') DEFAULT 'pendiente'"
+            );
+        }
 
         Schema::table('users', function (Blueprint $table) {
             if (! Schema::hasColumn('users', 'apellidos')) {

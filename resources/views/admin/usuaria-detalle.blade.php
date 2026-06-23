@@ -1,7 +1,38 @@
 @extends('layouts.admin')
 
 @section('contenido')
-<a href="{{ route('admin.usuarias') }}" class="link link-hover text-sm mb-4 inline-block">← Volver al listado</a>
+@php
+    $registro = $u->registros()->with(['documentos.datos', 'resultados.parametro'])->first();
+@endphp
+
+{{-- Breadcrumbs --}}
+<div class="text-sm breadcrumbs mb-4">
+    <ul>
+        <li><a href="{{ route('admin.dashboard') }}">Admin</a></li>
+        <li><a href="{{ route('admin.usuarias') }}">Usuarias</a></li>
+        <li class="truncate max-w-50">{{ $u->name }}</li>
+    </ul>
+</div>
+
+{{-- Alerta de posible duplicado (Solución C) --}}
+@php $dup = $u->resultado_analisis['posible_duplicado'] ?? null; @endphp
+@if ($dup)
+<div role="alert" class="alert alert-error mb-4 flex-col items-start gap-1">
+    <div class="flex items-center gap-2 font-bold">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        Posible cuenta duplicada detectada por OCR
+    </div>
+    <p class="text-sm">
+        El número de carnet extraído del documento (<span class="font-mono font-bold">{{ $u->resultado_analisis['numero_extraido'] ?? '—' }}</span>)
+        ya pertenece a otra usuaria registrada:
+        <a href="{{ route('admin.usuaria.ver', $dup['user_id']) }}" class="font-bold underline">
+            {{ $dup['nombre'] }}
+        </a>
+        ({{ $dup['email'] }} · estado: <span class="capitalize">{{ $dup['estado'] }}</span>).
+    </p>
+    <p class="text-xs opacity-80">Revisá ambas fichas antes de aprobar esta solicitud. Si es la misma persona, eliminá la cuenta más reciente.</p>
+</div>
+@endif
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     {{-- Datos --}}
@@ -29,6 +60,72 @@
                 </dl>
             </div>
         </div>
+
+        {{-- Datos OCR normalizados (dato_documento) --}}
+        @if ($registro)
+            @php $docAnverso = $registro->documentos->firstWhere('tipo_documento', 'cedula_anverso'); @endphp
+            @if ($docAnverso && $docAnverso->datos->count())
+                <div class="card bg-base-100 shadow">
+                    <div class="card-body">
+                        <h2 class="card-title">Datos extraídos por OCR</h2>
+                        <div class="flex items-center gap-2 mb-3">
+                            @if ($docAnverso->calidad_legible === true)
+                                <span class="badge badge-success badge-sm">Imagen legible</span>
+                            @elseif ($docAnverso->calidad_legible === false)
+                                <span class="badge badge-error badge-sm">Imagen no legible</span>
+                            @endif
+                        </div>
+                        <dl class="grid grid-cols-2 gap-y-2 gap-x-6 text-sm">
+                            @foreach ($docAnverso->datos as $dato)
+                                <div>
+                                    <dt class="text-base-content/60 capitalize">{{ str_replace('_', ' ', $dato->nombre_campo) }}</dt>
+                                    <dd class="font-mono">{{ $dato->valor_extraido ?? '—' }}</dd>
+                                </div>
+                            @endforeach
+                        </dl>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Resultados de validación por parámetro --}}
+            @if ($registro->resultados->count())
+                <div class="card bg-base-100 shadow">
+                    <div class="card-body">
+                        <h2 class="card-title">Resultados granulares de validación</h2>
+                        <div class="space-y-2 mt-2">
+                            @foreach ($registro->resultados as $r)
+                                @php
+                                    $rc = match ($r->resultado) {
+                                        'aprobado'  => 'border-success/40 bg-success/5',
+                                        'rechazado' => 'border-error/40 bg-error/5',
+                                        'observado' => 'border-warning/40 bg-warning/5',
+                                        default     => 'border-base-300',
+                                    };
+                                    $badge = match ($r->resultado) {
+                                        'aprobado'  => 'badge-success',
+                                        'rechazado' => 'badge-error',
+                                        'observado' => 'badge-warning',
+                                        default     => 'badge-ghost',
+                                    };
+                                @endphp
+                                <div class="border rounded-lg p-2 text-sm {{ $rc }}">
+                                    <div class="flex items-center gap-2">
+                                        <span class="badge {{ $badge }} badge-sm">{{ ucfirst($r->resultado) }}</span>
+                                        @if ($r->parametro)
+                                            <span class="font-medium">{{ $r->parametro->nombre_parametro }}</span>
+                                            <span class="badge badge-ghost badge-xs">{{ $r->parametro->categoria }}</span>
+                                        @endif
+                                    </div>
+                                    @if ($r->detalle)
+                                        <div class="text-base-content/60 mt-1 text-xs">{{ $r->detalle }}</div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+        @endif
 
         {{-- Resultado IA --}}
         @if ($u->resultado_analisis)
@@ -113,10 +210,19 @@
         @if ($u->vehiculo)
             <div class="card bg-base-100 shadow">
                 <div class="card-body">
-                    <h2 class="card-title">Vehículo declarado</h2>
-                    <div class="grid grid-cols-2 gap-y-2 gap-x-6 text-sm">
-                        <div><dt class="text-base-content/60">Placa</dt><dd class="font-mono uppercase">{{ $u->vehiculo->placa }}</dd></div>
+                    <h2 class="card-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 17a2 2 0 100-4 2 2 0 000 4zm8 0a2 2 0 100-4 2 2 0 000 4zm-8-7h8m-9-2l1-4h10l1 4"/></svg>
+                        Vehículo declarado
+                    </h2>
+                    <div class="grid grid-cols-2 gap-y-2 gap-x-6 text-sm mt-2">
+                        <div><dt class="text-base-content/60">Placa</dt><dd class="font-mono uppercase font-bold">{{ $u->vehiculo->placa }}</dd></div>
                         <div><dt class="text-base-content/60">Marca/Modelo</dt><dd>{{ $u->vehiculo->marca_modelo }}</dd></div>
+                        @if ($u->vehiculo->color)
+                        <div><dt class="text-base-content/60">Color</dt><dd class="capitalize">{{ $u->vehiculo->color }}</dd></div>
+                        @endif
+                        @if ($u->vehiculo->anio)
+                        <div><dt class="text-base-content/60">Año</dt><dd>{{ $u->vehiculo->anio }}</dd></div>
+                        @endif
                         <div><dt class="text-base-content/60">Relación</dt><dd class="capitalize">{{ $u->vehiculo->relacion_declarada }}</dd></div>
                     </div>
                 </div>
@@ -152,6 +258,12 @@
 
     {{-- Acciones --}}
     <div class="space-y-4">
+        <a href="{{ route('admin.usuaria.imprimir', $u) }}" target="_blank"
+           class="btn btn-ghost btn-sm w-full gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            Imprimir ficha
+        </a>
+
         <div class="card bg-base-100 shadow">
             <div class="card-body">
                 <h2 class="card-title">Acciones</h2>
@@ -222,39 +334,36 @@
             </div>
         </div>
 
-        {{-- Histórico de revisiones --}}
+        {{-- Histórico de revisiones (tabla relacional) --}}
         <div class="card bg-base-100 shadow">
             <div class="card-body">
-                <h2 class="card-title">Histórico de revisiones</h2>
-                @php $historial = $u->resultado_analisis['historial_revisiones'] ?? []; @endphp
-                @if (empty($historial))
+                <h2 class="card-title">Historial de revisiones</h2>
+                @if ($u->revisiones->isEmpty())
                     <p class="text-sm text-base-content/60">Sin revisiones manuales todavía.</p>
                 @else
-                    <ul class="timeline timeline-vertical timeline-compact">
-                        @foreach (array_reverse($historial) as $rev)
+                    <ul class="space-y-3 mt-2">
+                        @foreach ($u->revisiones as $rev)
                             @php
-                                $badge = match ($rev['accion'] ?? '') {
-                                    'aprobada' => 'badge-success',
+                                $badge = match ($rev->decision) {
+                                    'aprobada'  => 'badge-success',
                                     'rechazada' => 'badge-error',
-                                    'reanalisis' => 'badge-info',
-                                    default => 'badge-ghost',
+                                    'reanalisis'=> 'badge-info',
+                                    'reenvio'   => 'badge-warning',
+                                    default     => 'badge-ghost',
                                 };
                             @endphp
-                            <li>
-                                <div class="timeline-middle">
-                                    <span class="badge {{ $badge }} badge-xs"></span>
+                            <li class="border-l-2 border-base-300 pl-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="badge {{ $badge }} badge-sm">{{ ucfirst($rev->decision) }}</span>
+                                    <time class="text-xs text-base-content/60">{{ $rev->created_at->format('d/m/Y H:i') }}</time>
                                 </div>
-                                <div class="timeline-end mb-3">
-                                    <div class="flex items-center gap-2">
-                                        <span class="badge {{ $badge }} badge-sm">{{ ucfirst($rev['accion'] ?? '—') }}</span>
-                                        <time class="text-xs text-base-content/60">{{ $rev['fecha'] ?? '' }}</time>
-                                    </div>
-                                    <div class="text-xs text-base-content/70">{{ $rev['admin'] ?? '—' }}</div>
-                                    @if (! empty($rev['motivo']))
-                                        <div class="text-xs mt-1 italic">"{{ $rev['motivo'] }}"</div>
-                                    @endif
+                                <div class="text-xs text-base-content/70 mt-0.5">
+                                    {{ $rev->administrador?->name ?? '—' }}
+                                    <span class="text-base-content/40">({{ $rev->administrador?->email }})</span>
                                 </div>
-                                <hr/>
+                                @if ($rev->observacion)
+                                    <div class="text-xs mt-1 italic text-base-content/80">"{{ $rev->observacion }}"</div>
+                                @endif
                             </li>
                         @endforeach
                     </ul>

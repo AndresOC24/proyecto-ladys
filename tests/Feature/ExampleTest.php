@@ -1,7 +1,5 @@
 <?php
 
-it('returns a successful response', function () {
-    $response = $this->get('/');
-
-    $response->assertStatus(200);
+it('root redirects unauthenticated users to login', function () {
+    $this->get('/')->assertRedirect('/login');
 });

@@ -25,21 +25,60 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'name'                => fake()->name(),
+            'email'               => fake()->unique()->safeEmail(),
+            'email_verified_at'   => now(),
+            'password'            => static::$password ??= Hash::make('password'),
+            'remember_token'      => Str::random(10),
+            'numero_carnet'       => fake()->numerify('#######'),
+            'telefono'            => fake()->phoneNumber(),
+            'activa'              => true,
+            'estado_verificacion' => 'pendiente',
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
     public function unverified(): static
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    public function administradora(): static
+    {
+        return $this->state(function () {
+            $rol = \App\Models\Role::firstOrCreate(
+                ['nombre' => \App\Models\Role::ADMINISTRADOR],
+                ['descripcion' => 'Administrador del sistema']
+            );
+            return ['role_id' => $rol->id, 'estado_verificacion' => 'verificada'];
+        });
+    }
+
+    public function pasajera(): static
+    {
+        return $this->state(function () {
+            $rol = \App\Models\Role::firstOrCreate(
+                ['nombre' => \App\Models\Role::PASAJERO],
+                ['descripcion' => 'Usuaria pasajera']
+            );
+            return ['role_id' => $rol->id];
+        });
+    }
+
+    public function conductora(): static
+    {
+        return $this->state(function () {
+            $rol = \App\Models\Role::firstOrCreate(
+                ['nombre' => \App\Models\Role::CONDUCTORA],
+                ['descripcion' => 'Usuaria conductora']
+            );
+            return ['role_id' => $rol->id];
+        });
+    }
+
+    public function verificada(): static
+    {
+        return $this->state(['estado_verificacion' => 'verificada']);
     }
 }

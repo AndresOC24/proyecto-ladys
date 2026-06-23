@@ -15,6 +15,13 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    @auth
+                        @if (! auth()->user()->esAdministrador())
+                            <x-nav-link :href="route('mi-perfil')" :active="request()->routeIs('mi-perfil')">
+                                Mi Perfil
+                            </x-nav-link>
+                        @endif
+                    @endauth
                 </div>
             </div>
 
@@ -35,7 +42,7 @@
 
                     <x-slot name="content">
                         <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Profile') }}
+                            Editar perfil
                         </x-dropdown-link>
 
                         <!-- Authentication -->
@@ -70,6 +77,13 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+            @auth
+                @if (! auth()->user()->esAdministrador())
+                    <x-responsive-nav-link :href="route('mi-perfil')" :active="request()->routeIs('mi-perfil')">
+                        Mi Perfil
+                    </x-responsive-nav-link>
+                @endif
+            @endauth
         </div>
 
         <!-- Responsive Settings Options -->

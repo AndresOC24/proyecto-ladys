@@ -88,18 +88,56 @@
                        class="input input-bordered w-full" required>
             </label>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label class="floating-label">
-                    <span>Contraseña</span>
-                    <input type="password" name="password" placeholder="Contraseña"
-                           class="input input-bordered w-full" required>
-                </label>
+            <div x-data="{
+                pwd: '',
+                get fuerza() {
+                    const p = this.pwd;
+                    if (p.length === 0) return 0;
+                    let score = 0;
+                    if (p.length >= 8)  score++;
+                    if (p.length >= 12) score++;
+                    if (/[A-Z]/.test(p)) score++;
+                    if (/[0-9]/.test(p)) score++;
+                    if (/[^A-Za-z0-9]/.test(p)) score++;
+                    return Math.min(score, 4);
+                },
+                get etiqueta() {
+                    return ['', 'Débil', 'Regular', 'Buena', 'Fuerte'][this.fuerza];
+                },
+                get color() {
+                    return ['', 'bg-error', 'bg-warning', 'bg-info', 'bg-success'][this.fuerza];
+                }
+            }">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="floating-label">
+                            <span>Contraseña</span>
+                            <input type="password" name="password" placeholder="Contraseña"
+                                   class="input input-bordered w-full" required
+                                   x-model="pwd">
+                        </label>
+                        <div class="mt-2 space-y-1" x-show="pwd.length > 0">
+                            <div class="flex gap-1">
+                                <template x-for="i in 4">
+                                    <div class="h-1.5 flex-1 rounded-full transition-colors"
+                                         :class="i <= fuerza ? color : 'bg-base-300'"></div>
+                                </template>
+                            </div>
+                            <div class="text-xs" :class="{
+                                'text-error': fuerza === 1,
+                                'text-warning': fuerza === 2,
+                                'text-info': fuerza === 3,
+                                'text-success': fuerza === 4
+                            }" x-text="etiqueta"></div>
+                        </div>
+                    </div>
 
-                <label class="floating-label">
-                    <span>Confirmar</span>
-                    <input type="password" name="password_confirmation" placeholder="Repetir"
-                           class="input input-bordered w-full" required>
-                </label>
+                    <label class="floating-label">
+                        <span>Confirmar</span>
+                        <input type="password" name="password_confirmation" placeholder="Repetir"
+                               class="input input-bordered w-full" required>
+                    </label>
+                </div>
             </div>
 
             <button type="submit" class="btn btn-primary w-full">Continuar</button>

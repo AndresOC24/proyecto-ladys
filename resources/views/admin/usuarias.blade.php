@@ -3,6 +3,11 @@
 @section('contenido')
 <div class="flex items-center justify-between mb-6">
     <h1 class="text-2xl font-bold">Usuarias</h1>
+    <a href="{{ route('admin.usuarias.csv', request()->query()) }}"
+       class="btn btn-ghost btn-sm gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        Exportar CSV
+    </a>
 </div>
 
 <div class="card bg-base-100 shadow mb-4">
@@ -24,7 +29,16 @@
                 <option value="conductora" @selected(request('rol')==='conductora')>Conductora</option>
             </select>
 
-            <div class="sm:col-span-4 flex gap-2">
+            <div>
+                <label class="label py-0 pb-1"><span class="label-text text-xs">Registrada desde</span></label>
+                <input type="date" name="desde" value="{{ request('desde') }}" class="input input-bordered w-full">
+            </div>
+            <div>
+                <label class="label py-0 pb-1"><span class="label-text text-xs">Registrada hasta</span></label>
+                <input type="date" name="hasta" value="{{ request('hasta') }}" class="input input-bordered w-full">
+            </div>
+
+            <div class="sm:col-span-2 flex gap-2 items-end">
                 <button class="btn btn-primary">Filtrar</button>
                 <a href="{{ route('admin.usuarias') }}" class="btn btn-ghost">Limpiar</a>
             </div>

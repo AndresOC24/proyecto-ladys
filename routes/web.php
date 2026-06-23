@@ -53,12 +53,26 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('/registro/estado', [\App\Http\Controllers\RegistroController::class, 'estado'])
-    ->name('registro.estado');
+        ->name('registro.estado');
+
+    Route::get('/mi-perfil', function () {
+        $user = auth()->user();
+        if ($user->esAdministrador()) {
+            return redirect()->route('admin.dashboard');
+        }
+        return view('mi-perfil', ['user' => $user]);
+    })->name('mi-perfil');
+
+    Route::get('/registro/reenviar', [\App\Http\Controllers\RegistroController::class, 'mostrarReenvio'])
+        ->name('registro.reenviar');
+    Route::post('/registro/reenviar', [\App\Http\Controllers\RegistroController::class, 'guardarReenvio']);
 
     // Solo administradores
 Route::middleware('role:administrador')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [\App\Http\Controllers\AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/usuarias', [\App\Http\Controllers\AdminController::class, 'usuarias'])->name('usuarias');
+    Route::get('/usuarias/exportar-csv', [\App\Http\Controllers\AdminController::class, 'exportarCsv'])->name('usuarias.csv');
+    Route::get('/usuarias/{usuaria}/imprimir', [\App\Http\Controllers\AdminController::class, 'imprimir'])->name('usuaria.imprimir');
     Route::get('/usuarias/{usuaria}', [\App\Http\Controllers\AdminController::class, 'ver'])->name('usuaria.ver');
     Route::post('/usuarias/{usuaria}/aprobar', [\App\Http\Controllers\AdminController::class, 'aprobar'])->name('usuaria.aprobar');
     Route::post('/usuarias/{usuaria}/rechazar', [\App\Http\Controllers\AdminController::class, 'rechazar'])->name('usuaria.rechazar');
@@ -72,6 +86,29 @@ Route::middleware('role:administrador')->prefix('admin')->name('admin.')->group(
     // Generación de reportes
     Route::get('/reportes', [\App\Http\Controllers\ReporteController::class, 'index'])->name('reportes');
     Route::get('/reportes/exportar/{formato}', [\App\Http\Controllers\ReporteController::class, 'exportar'])->name('reportes.exportar');
+
+    // Bitácora de auditoría
+    Route::get('/bitacora', [\App\Http\Controllers\AdminController::class, 'bitacora'])->name('bitacora');
+
+    // Bandeja de revisión
+    Route::get('/revision', [\App\Http\Controllers\AdminController::class, 'revision'])->name('revision');
+
+    // Parámetros de control — rutas fijas ANTES que las de modelo {parametro}
+    Route::get('/parametros', [\App\Http\Controllers\AdminController::class, 'parametros'])->name('parametros');
+    Route::get('/parametros/crear', [\App\Http\Controllers\AdminController::class, 'crearParametroForm'])->name('parametros.crear');
+    Route::post('/parametros/crear', [\App\Http\Controllers\AdminController::class, 'guardarParametro'])->name('parametros.guardar');
+    Route::get('/parametros/{parametro}/editar', [\App\Http\Controllers\AdminController::class, 'editarParametro'])->name('parametros.editar');
+    Route::post('/parametros/{parametro}/toggle', [\App\Http\Controllers\AdminController::class, 'toggleParametro'])->name('parametros.toggle');
+    Route::patch('/parametros/{parametro}', [\App\Http\Controllers\AdminController::class, 'actualizarParametro'])->name('parametros.actualizar');
+    Route::delete('/parametros/{parametro}', [\App\Http\Controllers\AdminController::class, 'eliminarParametro'])->name('parametros.eliminar');
+
+    // Gestión de administradoras
+    Route::get('/administradoras', [\App\Http\Controllers\AdminController::class, 'administradoras'])->name('administradoras');
+    Route::get('/administradoras/crear', [\App\Http\Controllers\AdminController::class, 'crearAdminForm'])->name('administradoras.crear');
+    Route::post('/administradoras', [\App\Http\Controllers\AdminController::class, 'guardarAdmin'])->name('administradoras.guardar');
+
+    // Cuenta propia del admin
+    Route::get('/mi-cuenta', fn () => view('admin.mi-cuenta'))->name('mi-cuenta');
 });
 
     // Solo conductoras

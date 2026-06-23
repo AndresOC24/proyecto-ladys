@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['name', 'email', 'password'])]
@@ -53,6 +54,21 @@ class User extends Authenticatable
     public function vehiculo(): HasOne
     {
         return $this->hasOne(Vehiculo::class);
+    }
+
+    public function revisiones(): HasMany
+    {
+        return $this->hasMany(Revision::class, 'user_id')->latest();
+    }
+
+    public function registros(): HasMany
+    {
+        return $this->hasMany(RegistroVerificacion::class, 'user_id')->latest();
+    }
+
+    public function ultimoRegistro(): ?RegistroVerificacion
+    {
+        return $this->registros()->with(['documentos.datos', 'resultados.parametro'])->first();
     }
 
     public function hasRole(string $nombre): bool

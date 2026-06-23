@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Services\BitacoraService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,6 +40,10 @@ class AuthenticatedSessionController extends Controller
         }
 
         $request->session()->regenerate();
+
+        BitacoraService::registrar('login', 'User', $request->user()->id, [
+            'ip' => $request->ip(),
+        ], $request->user()->id);
 
         $destino = $request->user()->esAdministrador() ? 'admin.dashboard' : 'dashboard';
         return redirect()->intended(route($destino, absolute: false));

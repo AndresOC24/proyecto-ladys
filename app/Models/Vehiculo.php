@@ -10,7 +10,7 @@ class Vehiculo extends Model
     protected $table = 'vehiculos';
 
     protected $fillable = [
-        'user_id', 'placa', 'marca_modelo', 'relacion_declarada',
+        'user_id', 'placa', 'marca_modelo', 'color', 'anio', 'relacion_declarada',
     ];
 
     public function user(): BelongsTo

@@ -40,7 +40,25 @@
                     <span class="label-text font-semibold">Marca y modelo</span>
                 </label>
                 <input id="marca_modelo" type="text" name="marca_modelo" value="{{ old('marca_modelo') }}"
-                       class="input input-bordered w-full" placeholder="Ej. Toyota Corolla 2018" required>
+                       class="input input-bordered w-full" placeholder="Ej. Toyota Corolla" required>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="label" for="color">
+                        <span class="label-text font-semibold">Color</span>
+                    </label>
+                    <input id="color" type="text" name="color" value="{{ old('color') }}"
+                           class="input input-bordered w-full" placeholder="Ej. Rojo">
+                </div>
+                <div>
+                    <label class="label" for="anio">
+                        <span class="label-text font-semibold">Año</span>
+                    </label>
+                    <input id="anio" type="number" name="anio" value="{{ old('anio') }}"
+                           class="input input-bordered w-full" placeholder="{{ date('Y') }}"
+                           min="1990" max="{{ date('Y') + 1 }}">
+                </div>
             </div>
 
             <div>
